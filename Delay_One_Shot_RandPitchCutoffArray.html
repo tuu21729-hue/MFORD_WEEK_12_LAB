@@ -1,0 +1,142 @@
+<!doctype html>
+
+<head>
+<meta charset="utf-8">
+<title>ADSR Delay Voice</title>
+<style>body{background:#fff;color:#000}</style>
+
+  </head>
+    <body>
+
+<button id="trig" type="button">Play note</button>
+
+<p>
+Delay time <input id="time" type="range" min="10" max="2000" value="350">
+<br>
+Feedback <input id="fb" type="range" min="0" max="95" value="50">
+<br>
+Modultor <input id="fb" type="range" min="0" max="95" value="50">
+</p>
+
+
+<script>
+
+const ctx = new AudioContext();
+
+const master = new GainNode(ctx)
+master.gain.value = 0.1;
+
+
+const delay = new DelayNode(ctx, { maxDelayTime: 2.5})
+
+delay.delayTime = 0.35
+
+const feedback = new GainNode(ctx)
+feedback.gain.value = 0.5;
+
+const DelFilter = new BiquadFilterNode(ctx)
+DelFilter.type = "bandpass"
+DelFilter.frequency.value = 2000;
+
+
+delay.connect(feedback);
+feedback.connect(DelFilter);
+DelFilter.connect(delay);
+
+
+delay.connect(master);
+master.connect(ctx.destination);
+
+// Everything above is built once. The code below runs on every click
+// and builds a brand new note each time.
+function playNote(frequency, filterCutOff) 
+
+{
+
+  ctx.resume();
+
+  // "Now" on the audio clock. All the timings below are offsets from this.
+  const t = ctx.currentTime;
+
+
+  const osc1 = new OscillatorNode(ctx)
+  osc1.type = "sawtooth";
+  osc1.frequency.value = frequency;
+
+  const filter = new BiquadFilterNode(ctx);
+  filter.type = "lowpass"
+  filter.frequency.value = frequency * filterCutOff;
+  filter.Q = 50
+
+  const filterLFO = new OscillatorNode(ctx);
+  filterLFO.type = "sine";
+  filterLFO.frequency.value = 1 
+
+  const LFOdepth = new GainNode(ctx);
+  LFOdepth.gain.value = (frequency * filterCutOff) * 2/3
+
+  filterLFO.connect(LFOdepth);
+  LFOdepth.connect(filter.frequency);
+
+  const dur = 0.125
+  const env = new GainNode(ctx)
+  env.gain.value = 0;
+
+  env.gain.setValueAtTime(0, t);                     // start silent
+  env.gain.linearRampToValueAtTime(1, t + dur*0.5);     // Attack
+  env.gain.linearRampToValueAtTime(0.3, t + dur*0.55);    // Decay
+  //env.gain.setValueAtTime(0.2, t + dur*0.9);             // Sustain
+  env.gain.linearRampToValueAtTime(0, t + dur);      // Release
+
+  osc1.connect(filter);
+  filter.connect(env);
+  env.connect(master);  // straight to the speakers (the "dry" sound)
+  env.connect(delay);   // into the delay loop (the echoes, or "wet" sound)
+
+  // Start the tone now, and stop it just after the release has finished.
+  // A stopped node with nothing referring to it is cleaned up by the browser.
+  osc1.start(t);
+  filterLFO.start(t);
+  osc1.stop(t + dur);
+  filterLFO.stop(t + dur);
+};
+
+
+   // 1. Define the array of choices
+        const midiPitches = [36, 38, 41, 43, 46, 24];
+
+        // 2. Create the random picker function
+        const randomPitch = function() {
+            let randomMidiNote = midiPitches[Math.floor(Math.random() * midiPitches.length)];
+            
+            let newFreq = 440 * 2 ** ((randomMidiNote - 69) / 12);
+
+            return newFreq;
+        }
+
+        const MultArray = [20, 40, 80, 160, 320]
+        const filterFreq = function()
+            {
+                let filterMult = MultArray[Math.floor(Math.random() * MultArray.length)];
+              
+
+                return filterMult
+                        }
+    
+
+document.querySelector("#trig").onclick = () => playNote(randomPitch(), filterFreq());
+       
+
+// Delay time slider
+document.getElementById('time').addEventListener('input', function (e) {
+  delay.delayTime.setTargetAtTime(e.target.value / 1000, ctx.currentTime, 0.05);
+});
+
+// Feedback slider.
+document.getElementById('fb').addEventListener('input', function (e) {
+  feedback.gain.setTargetAtTime(e.target.value / 100, ctx.currentTime, 0.02);
+});
+</script>
+
+</body>
+</html>

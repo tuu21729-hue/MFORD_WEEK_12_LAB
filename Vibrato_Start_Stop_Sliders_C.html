@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset = "UTF-8">
+    <title> Start Stop Fun</title>
+    </head>
+    <body>
+        <button id = "Start1">Start1</button>
+        <button id = "Stop1">Stop1</button>
+        <input id = "Modulator1" type="range" min="0" max="1000" step="10" value="0.0"><label id="Modulator1">Modulator_1</label>
+        <input id = "Index1" type="range" min="0" max="100" step="1" value="0.0"><label id="Index1">Index_1</label>
+        <input id = "FiltSpeed1" type="range" min="0" max="5" step="0.01" value="0.0"><label id="FiltSpeed1">FiltSpeed_1</label>
+         <script>
+ 
+const ctx = new AudioContext();
+
+let osc1, mod, filterMod
+document.querySelector("#Start1").onclick = () =>
+
+{
+ 
+//Set up Frequency Modulation Tone
+osc1 = new OscillatorNode(ctx);
+osc1.frequency.value = 220;
+osc1.type = "sine";
+
+const osc1Gain = new GainNode(ctx);
+osc1Gain.gain.value = 0.1;
+
+
+
+
+mod = new OscillatorNode(ctx);
+mod.type = "sine"
+mod.frequency.value = 55; // modulator value
+
+const modulatorGain = new GainNode(ctx);
+modulatorGain.gain.value = 4000; // Index or strength of harmonics
+
+//Set up Oscillating Filter
+
+const filter = new BiquadFilterNode(ctx);
+filter.type = "lowpass";
+filter.frequency.value = 1200;
+filter.Q.value = 20;
+
+filterMod = new OscillatorNode(ctx);
+filterMod.frequency.value = 0.5;
+filterMod.type = "square";
+
+const filterModGain = new GainNode(ctx);
+filterModGain.gain.value = 1000
+
+
+//connect everything up
+
+filterMod.connect(filterModGain);
+filterModGain.connect(filter.frequency)
+
+osc1.connect(osc1Gain);
+
+mod.connect(modulatorGain);
+modulatorGain.connect(osc1.frequency);
+
+
+osc1Gain.connect(filter);
+filter.connect(ctx.destination);
+
+const slider1 = document.querySelector("#Modulator1");
+        slider1.addEventListener("input", () => {
+            ctx.resume();
+        modulatorGain.gain.value = Number(slider1.value);
+        document.querySelector("Modulator1").textContent = slider1.value;
+
+});
+
+ const slider2 = document.querySelector("#Index1");
+        slider2.addEventListener("input", () => {
+            ctx.resume();
+        mod.frequency.value = Number(slider2.value);
+        document.querySelector("Index1").textContent = slider2.value;
+
+});
+
+ const slider3 = document.querySelector("#FiltSpeed1");
+        slider3.addEventListener("input", () => {
+            ctx.resume();
+        filterMod.frequency.value= Number(slider3.value);
+        document.querySelector("FiltSpeed1").textContent = slider3.value;
+
+});
+
+
+osc1.start();
+mod.start();
+filterMod.start();
+
+}
+
+document.querySelector("#Stop1").onclick = () =>
+
+{
+
+osc1.stop();
+mod.stop();
+filterMod.stop();
+
+}
+
+
+
+        
+
+
+
+</script>
+
+</body>
+
+</html>
